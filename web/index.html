@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Helios PRD - Site Material Requests (Local Demo)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Persistent DEMO banner -->
+  <div class="demo-banner" data-testid="demo-banner">
+    <div class="demo-badge">DEMO — LOCAL ONLY</div>
+    <div class="demo-desc">Local prototype for Excel-driven material-line entry. No connection to Helios PRD production portal.</div>
+  </div>
+
+  <!-- Maximo-style Enterprise Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <span class="app-title">Site Material Requests</span>
+    </div>
+    <div class="header-toolbar">
+      <button type="button" class="tool-btn" title="Save Record">💾</button>
+      <button type="button" class="tool-btn" title="New Record">📄</button>
+      <button type="button" class="tool-btn" title="Previous">◀</button>
+      <button type="button" class="tool-btn" title="Next">▶</button>
+      <button type="button" class="tool-btn" title="Find">🔍</button>
+      <button type="button" class="tool-btn" title="Help">❓</button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="app-tabs" aria-label="Material Request Tabs">
+    <button type="button" class="tab-item">Record View</button>
+    <button type="button" class="tab-item">Comments</button>
+    <button type="button" class="tab-item">Documents</button>
+    <button type="button" class="tab-item">Material Lists</button>
+    <button type="button" class="tab-item active" aria-selected="true">Lines</button>
+    <button type="button" class="tab-item">Substitutes</button>
+  </nav>
+
+  <!-- Main Container with Sidebar + Content -->
+  <div class="app-body">
+    <!-- Left Navigation Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-search">
+        <input type="text" placeholder="Search within All Records" class="sidebar-search-input" readonly>
+      </div>
+      <div class="record-list">
+        <div class="record-card">
+          <div class="record-header">42828 - Corrective maintenance</div>
+          <div class="record-meta">Organization: TZ</div>
+          <div class="record-meta">Department: 400200</div>
+          <div class="record-badge">Status: Awaiting Approval 1</div>
+        </div>
+        <div class="record-card active">
+          <div class="record-header">42818 - Vodacom B2S -Material C...</div>
+          <div class="record-meta">Organization: TZ</div>
+          <div class="record-meta">Department: 400200</div>
+          <div class="record-badge warning">Status: Unfinished</div>
+        </div>
+        <div class="record-card">
+          <div class="record-header">42774 - DGs ARUSHA</div>
+          <div class="record-meta">Organization: TZ</div>
+          <div class="record-meta">Department: 400200</div>
+          <div class="record-badge">Status: Pick Ticket Created</div>
+        </div>
+        <div class="record-card">
+          <div class="record-header">42614 - SWO Closure</div>
+          <div class="record-meta">Organization: TZ</div>
+          <div class="record-meta">Department: 400200</div>
+          <div class="record-badge">Status: Pick Ticket Created</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace (Lines View) -->
+    <main class="main-content">
+      <!-- Sub-toolbar -->
+      <div class="sub-toolbar">
+        <div class="sub-toolbar-left">
+          <span class="sub-toolbar-title">All Records</span>
+        </div>
+        <div class="sub-toolbar-center">
+          <label for="filter-line-search">Line ==</label>
+          <input type="text" id="filter-line-search" class="filter-input" placeholder="Search line...">
+          <button type="button" class="btn-sm">Run</button>
+        </div>
+        <div class="sub-toolbar-right">
+          <button type="button" id="btn-reset-table" data-testid="btn-reset-table" class="btn btn-outline-danger btn-sm">Reset / Clear Table</button>
+        </div>
+      </div>
+
+      <!-- Lines Grid / Table Section -->
+      <section class="grid-section" aria-label="Material Lines Table Section">
+        <div class="table-container">
+          <table class="data-table" id="material-lines-table">
+            <thead>
+              <tr class="header-row">
+                <th style="width: 55px;">Line</th>
+                <th style="width: 100px;">Part</th>
+                <th style="width: 220px;">Part Description</th>
+                <th style="width: 60px;">Qty</th>
+                <th style="width: 90px;">Site</th>
+                <th style="width: 160px;">Cost Code - SAP Budget Line</th>
+                <th style="width: 200px;">WBS and Project Code</th>
+                <th style="width: 90px;">Available QTY</th>
+                <th style="width: 90px;">Qty On Hand</th>
+                <th style="width: 100px;">Bin</th>
+                <th style="width: 110px;">Actual Issued Qty</th>
+                <th style="width: 110px;">Actual Returns Qty</th>
+                <th style="width: 110px;">Return Condition</th>
+                <th style="width: 120px;">Expected Return Qty</th>
+                <th style="width: 100px;">Material List</th>
+                <th style="width: 110px;">Part Commodity</th>
+              </tr>
+              <tr class="filter-row">
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+                <td><input type="text" class="col-filter" placeholder="=" readonly></td>
+              </tr>
+            </thead>
+            <tbody id="lines-table-body" data-testid="lines-table-body">
+              <!-- Dynamically populated or empty initially -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table Pagination / Status Bar -->
+        <div class="table-footer">
+          <div class="records-info">
+            Records: <span id="record-count" data-testid="record-count">0</span> of <span id="total-count">0</span>
+          </div>
+          <div class="pagination-controls">
+            <button type="button" class="page-btn" title="First">|◀</button>
+            <button type="button" class="page-btn" title="Previous">◀</button>
+            <button type="button" class="page-btn" title="Next">▶</button>
+            <button type="button" class="page-btn" title="Last">▶|</button>
+            <span class="filter-toggle">Show Filter Row</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Feedback / Status Message Area -->
+      <div id="status-message" data-testid="status-message" role="status" class="status-banner status-idle">
+        Ready. Waiting for input.
+      </div>
+
+      <!-- Line Item Form Section -->
+      <section class="form-section" aria-label="Line Item Entry Form">
+        <div class="section-header">
+          <span class="toggle-icon">▼</span>
+          <span class="section-title">Line Item</span>
+        </div>
+
+        <form id="line-entry-form" class="line-form" onsubmit="return false;">
+          <div class="form-columns">
+            <!-- Left Column: Core Fields including Required Fields -->
+            <div class="form-column">
+              <!-- Part (Required) -->
+              <div class="form-group">
+                <label for="input-part">Part <span class="required-asterisk">*</span></label>
+                <div class="input-with-lookup">
+                  <input type="text" id="input-part" name="part" data-testid="input-part" aria-label="Part" required placeholder="e.g. CABL00058">
+                  <button type="button" class="lookup-btn" title="Select Value">🔍</button>
+                </div>
+              </div>
+
+              <!-- Part Commodity -->
+              <div class="form-group">
+                <label for="input-commodity">Part Commodity</label>
+                <input type="text" id="input-commodity" name="commodity" readonly placeholder="Auto-populated">
+              </div>
+
+              <!-- Qty On Hand -->
+              <div class="form-group">
+                <label for="input-on-hand">Qty On Hand</label>
+                <input type="text" id="input-on-hand" name="qty_on_hand" readonly placeholder="0">
+              </div>
+
+              <!-- Available QTY -->
+              <div class="form-group">
+                <label for="input-available-qty">Available QTY</label>
+                <input type="text" id="input-available-qty" name="available_qty" readonly placeholder="0">
+              </div>
+
+              <!-- UOM -->
+              <div class="form-group">
+                <label for="input-uom">UOM <span class="required-asterisk">*</span></label>
+                <input type="text" id="input-uom" name="uom" value="EA" readonly>
+              </div>
+
+              <!-- Qty (Required) -->
+              <div class="form-group">
+                <label for="input-qty">Qty <span class="required-asterisk">*</span></label>
+                <input type="number" id="input-qty" name="qty" data-testid="input-qty" aria-label="Qty" step="1" min="1" required placeholder="e.g. 1">
+              </div>
+
+              <!-- Qty per Material List -->
+              <div class="form-group">
+                <label for="input-qty-mat-list">Qty per Material List</label>
+                <input type="text" id="input-qty-mat-list" readonly>
+              </div>
+
+              <!-- Total Qty -->
+              <div class="form-group">
+                <label for="input-total-qty">Total Qty</label>
+                <input type="text" id="input-total-qty" readonly>
+              </div>
+
+              <!-- Actual Issued Qty -->
+              <div class="form-group">
+                <label for="input-issued-qty">Actual Issued Qty</label>
+                <input type="text" id="input-issued-qty" readonly>
+              </div>
+
+              <!-- Site (Required) -->
+              <div class="form-group">
+                <label for="input-site">Site <span class="required-asterisk">*</span></label>
+                <div class="input-with-lookup">
+                  <input type="text" id="input-site" name="site" data-testid="input-site" aria-label="Site" required placeholder="e.g. TZKA8027">
+                  <button type="button" class="lookup-btn" title="Select Site">🔍</button>
+                </div>
+              </div>
+
+              <!-- Cost Code - SAP Budget Line (Required) -->
+              <div class="form-group">
+                <label for="input-cost-code">Cost Code - SAP Budget Line <span class="required-asterisk">*</span></label>
+                <div class="input-with-lookup">
+                  <input type="text" id="input-cost-code" name="cost_code" data-testid="input-cost-code" aria-label="Cost Code - SAP Budget Line" required placeholder="e.g. 2026_2.2.1.">
+                  <button type="button" class="lookup-btn" title="Select Cost Code">🔍</button>
+                </div>
+              </div>
+
+              <!-- SWO Reference -->
+              <div class="form-group">
+                <label for="input-swo-ref">SWO Reference</label>
+                <input type="text" id="input-swo-ref" placeholder="Optional">
+              </div>
+
+              <!-- WBS Code -->
+              <div class="form-group">
+                <label for="input-wbs-code">WBS Code</label>
+                <input type="text" id="input-wbs-code" placeholder="Optional">
+              </div>
+
+              <!-- WBS and Project Code (Required) -->
+              <div class="form-group">
+                <label for="input-wbs">WBS and Project Code <span class="required-asterisk">*</span></label>
+                <div class="input-with-lookup">
+                  <input type="text" id="input-wbs" name="wbs" data-testid="input-wbs" aria-label="WBS and Project Code" required placeholder="e.g. TZKA8027-1795051262">
+                  <button type="button" class="lookup-btn" title="Select WBS">🔍</button>
+                </div>
+              </div>
+
+              <!-- WBS and Project Desc -->
+              <div class="form-group">
+                <label for="input-wbs-desc">WBS and Project Desc</label>
+                <input type="text" id="input-wbs-desc" readonly placeholder="Auto-populated description">
+              </div>
+            </div>
+
+            <!-- Right Column: Secondary Metadata from Screenshot -->
+            <div class="form-column">
+              <div class="form-group">
+                <label for="input-return-cond">Return Condition</label>
+                <input type="text" id="input-return-cond" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-return-part">Return Part</label>
+                <input type="text" id="input-return-part" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-exp-return-qty">Expected Return Qty</label>
+                <input type="text" id="input-exp-return-qty" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-date-removed">Date removed from the Site</label>
+                <div class="input-with-lookup">
+                  <input type="text" id="input-date-removed" readonly placeholder="YYYY-MM-DD">
+                  <button type="button" class="lookup-btn">📅</button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="input-actual-return-qty">Actual Returns Qty</label>
+                <input type="text" id="input-actual-return-qty" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-project-task">Project Task</label>
+                <input type="text" id="input-project-task" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-material-list">Material List</label>
+                <input type="text" id="input-material-list" readonly>
+              </div>
+
+              <div class="form-group">
+                <label for="input-store">Store</label>
+                <input type="text" id="input-store" value="400206" readonly class="bg-readonly">
+              </div>
+
+              <div class="form-group">
+                <label for="input-bin">Bin</label>
+                <input type="text" id="input-bin" value="400206-PROJ" readonly class="bg-readonly">
+              </div>
+
+              <div class="form-group">
+                <label for="input-organization">Organization</label>
+                <input type="text" id="input-organization" value="TZ" readonly class="bg-readonly">
+              </div>
+
+              <div class="form-group">
+                <label for="input-department">Department</label>
+                <input type="text" id="input-department" value="400200" readonly class="bg-readonly">
+              </div>
+
+              <div class="form-group">
+                <label for="input-request-id">Site Material Request</label>
+                <input type="text" id="input-request-id" value="42818" readonly class="bg-readonly">
+              </div>
+
+              <div class="form-group">
+                <label for="input-current-line-no">Line</label>
+                <input type="text" id="input-current-line-no" value="10" readonly class="bg-readonly highlight-line">
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons Bar -->
+          <div class="form-actions">
+            <span class="enter-hint">💡 <em>Helios PRD saves lines when you press <strong>Enter</strong> in the fields.</em></span>
+            <button type="button" id="btn-add-line" data-testid="btn-add-line" class="btn btn-primary" style="display: none;">
+              Add Line
+            </button>
+            <button type="button" id="btn-clear-form" data-testid="btn-clear-form" class="btn btn-secondary btn-sm">
+              Clear Inputs
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <!-- Maximo-style Error Popup Dialog -->
+  <div id="error-popup" class="modal-overlay" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <span class="modal-title">⚠️ System Message - Validation Error</span>
+        <button type="button" class="modal-close-btn" onclick="document.getElementById('error-popup').style.display='none'">✕</button>
+      </div>
+      <div class="modal-body" id="modal-error-text">
+        Validation Error: Missing required field(s).
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('error-popup').style.display='none'">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
