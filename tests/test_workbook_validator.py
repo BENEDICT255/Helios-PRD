@@ -80,3 +80,28 @@ def test_non_numeric_quantity(tmp_path):
 
     with pytest.raises(WorkbookValidationError, match="Row 2 has invalid Quantity 'Two'"):
         load_and_validate_workbook(test_file)
+
+def test_fractional_quantity_rejected(tmp_path):
+    test_file = tmp_path / "fractional_qty.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(REQUIRED_COLUMNS)
+    ws.append(["CABL00058", 1.5, "TZKA8027", "2026_2.2.1.", "TZKA8027-1795051262"])
+    wb.save(test_file)
+
+    with pytest.raises(WorkbookValidationError, match="whole number"):
+        load_and_validate_workbook(test_file)
+
+def test_old_template_hint_row_is_ignored(tmp_path):
+    test_file = tmp_path / "old_template.xlsx"
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.append(REQUIRED_COLUMNS)
+    ws.append(["Format: Part code", "Format: Positive number", "Format: Site ID", "Format: Budget line", "Format: WBS"])
+    ws.append(["CABL00058", 1, "TZKA8027", "2026_2.2.1.", "TZKA8027-1795051262"])
+    wb.save(test_file)
+
+    records = load_and_validate_workbook(test_file)
+    assert len(records) == 1
+    assert records[0].row_index == 3
+    assert records[0].item_code == "CABL00058"

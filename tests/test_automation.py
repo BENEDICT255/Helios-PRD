@@ -16,6 +16,30 @@ from src.models import MaterialLineRecord
 SAMPLE_EXCEL_PATH = Path(__file__).parent.parent / "data" / "sample_material_lines.xlsx"
 WEB_DIR = Path(__file__).parent.parent / "web"
 
+PORTAL_MOCK = """<!doctype html><html><body>
+<input name="wspf_10_mll_udfchar03">
+<input name="wspf_10_mll_udfnum01">
+<input name="wspf_10_mll_udfchar05">
+<input name="wspf_10_mll_udfchar09">
+<input name="wspf_10_mll_udfchar16">
+<script>
+document.querySelector('[name="wspf_10_mll_udfchar16"]').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    setTimeout(() => document.querySelectorAll('input').forEach(el => el.value = ''), 20);
+  }
+});
+</script></body></html>"""
+
+def make_portal_mock(tmp_path, reset=True):
+    html = PORTAL_MOCK if reset else PORTAL_MOCK.replace(
+        "setTimeout(() => document.querySelectorAll('input').forEach(el => el.value = ''), 20);",
+        "/* deliberately leave the form populated */",
+    )
+    path = tmp_path / "portal_mock.html"
+    path.write_text(html, encoding="utf-8")
+    return path.as_uri()
+
 @pytest.fixture(scope="session")
 def local_server_url():
     """Starts a local HTTP server on a free port for the test session."""
@@ -193,3 +217,40 @@ def test_dry_run_mode_does_not_save_rows(local_server_url):
         page.goto(local_server_url)
         assert page.locator('[data-testid="material-line-row"]').count() == 0
         browser.close()
+
+def test_portal_mode_enters_rows_and_does_not_claim_save_verification(tmp_path):
+    records = load_and_validate_workbook(SAMPLE_EXCEL_PATH, expected_row_count=7)
+    automation = MaterialLineAutomation(
+        target_url=make_portal_mock(tmp_path),
+        headless=True,
+        slow_mo=0,
+        portal_mode=True,
+        transition_timeout_ms=1000,
+    )
+
+    report = automation.run(records, workbook_path=str(SAMPLE_EXCEL_PATH))
+
+    assert report.entered_rows == 7
+    assert report.successful_rows == 0
+    assert report.failed_rows == 0
+    assert report.uncertain_rows == 0
+    assert all(result.status == "ENTER_SENT" for result in report.row_results)
+    assert all(result.verification_passed is False for result in report.row_results)
+
+def test_portal_mode_stops_after_enter_if_form_does_not_reset(tmp_path):
+    records = load_and_validate_workbook(SAMPLE_EXCEL_PATH, expected_row_count=7)
+    automation = MaterialLineAutomation(
+        target_url=make_portal_mock(tmp_path, reset=False),
+        headless=True,
+        slow_mo=0,
+        portal_mode=True,
+        transition_timeout_ms=200,
+    )
+
+    report = automation.run(records, workbook_path=str(SAMPLE_EXCEL_PATH))
+
+    assert report.entered_rows == 0
+    assert report.uncertain_rows == 1
+    assert report.row_results[0].status == "UNCERTAIN"
+    assert all(result.status == "SKIPPED" for result in report.row_results[1:])
+    assert report.stop_reason

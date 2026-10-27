@@ -68,9 +68,21 @@ def load_and_validate_workbook(
 
     # Process data rows
     data_rows = rows[1:]
+    first_data_row = 2
+    # Older generated templates placed human hints in row 2. Treat that row
+    # as instructions, never as an actual material line.
+    if data_rows and data_rows[0] and all(
+        cell is None or str(cell).strip() == "" or str(cell).strip().lower().startswith("format:")
+        for cell in data_rows[0]
+    ) and any(
+        str(cell).strip().lower().startswith("format:")
+        for cell in data_rows[0] if cell is not None
+    ):
+        data_rows = data_rows[1:]
+        first_data_row = 3
     records: List[MaterialLineRecord] = []
 
-    for row_idx, row in enumerate(data_rows, start=2):
+    for row_idx, row in enumerate(data_rows, start=first_data_row):
         # Skip completely empty trailing rows
         if all(cell is None or str(cell).strip() == "" for cell in row):
             continue
@@ -104,10 +116,9 @@ def load_and_validate_workbook(
             qty_num = float(qty_val)
             if qty_num <= 0:
                 raise ValueError("Quantity must be greater than zero.")
-            if qty_num.is_integer():
-                qty_int = int(qty_num)
-            else:
-                qty_int = int(qty_num)  # Or keep as int if whole units
+            if not qty_num.is_integer():
+                raise ValueError("Quantity must be a whole number.")
+            qty_int = int(qty_num)
         except (ValueError, TypeError) as err:
             raise WorkbookValidationError(
                 f"Row {row_idx} has invalid Quantity '{qty_val}': must be a positive number ({err})"

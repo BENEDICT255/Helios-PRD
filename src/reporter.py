@@ -7,6 +7,11 @@ from pathlib import Path
 from src.models import RunReport
 
 def generate_markdown_report(report: RunReport, output_path: Path) -> Path:
+    mode_label = (
+        "DRY RUN (no page changes)" if report.is_dry_run
+        else "PRD ENTER-ONLY (save not verified)" if report.portal_mode
+        else "LOCAL DEMO (rows verified on dummy page)"
+    )
     lines = [
         "# Helios PRD - Material Lines Entry Automation Report",
         "",
@@ -14,9 +19,11 @@ def generate_markdown_report(report: RunReport, output_path: Path) -> Path:
         f"- **Timestamp**: `{report.start_time}` to `{report.end_time}`",
         f"- **Target URL**: `{report.target_url}`",
         f"- **Workbook**: `{report.workbook_path}`",
-        f"- **Mode**: `{'DRY RUN (No changes saved)' if report.is_dry_run else 'LIVE RUN'}`",
+        f"- **Mode**: `{mode_label}`",
         f"- **Total Rows**: `{report.total_rows}`",
-        f"- **Successfully Saved & Verified**: `{report.successful_rows}`",
+        f"- **Demo rows saved and verified**: `{report.successful_rows}`",
+        f"- **PRD Enter presses sent (not save-verified)**: `{report.entered_rows}`",
+        f"- **PRD rows needing manual review**: `{report.uncertain_rows}`",
         f"- **Failed / Rejected**: `{report.failed_rows}`",
         f"- **Skipped**: `{report.skipped_rows}`",
         "",
@@ -39,6 +46,8 @@ def generate_markdown_report(report: RunReport, output_path: Path) -> Path:
     for res in report.row_results:
         status_badge = (
             "✅ SUCCESS" if res.status == "SUCCESS"
+            else "↵ ENTER SENT — REVIEW" if res.status == "ENTER_SENT"
+            else "⚠️ UNCERTAIN — REVIEW" if res.status == "UNCERTAIN"
             else "❌ FAILED" if res.status == "FAILED"
             else "🔍 DRY_RUN" if res.status == "DRY_RUN"
             else "⏭️ SKIPPED"
@@ -53,10 +62,11 @@ def generate_markdown_report(report: RunReport, output_path: Path) -> Path:
 
     lines.extend([
         "",
-        "## Exact Value Verification Verification Notes",
-        "- Excel `Line` value `2026_2.2.1.` must preserve the trailing period in the page `Cost Code - SAP Budget Line`.",
-        "- No save retry occurs on uncertain or failed status to prevent duplicates.",
-        "- Missing required fields or invalid quantities halt the batch immediately.",
+        "## Notes",
+        "- The local demo verifies saved rows. PRD mode does not inspect the Lines grid or verify server saves; it sends Enter once per Excel row and leaves final review to the user.",
+        "- PRD mode waits for the five input fields to clear before continuing. If they do not clear, it stops and marks that row uncertain to prevent accidental duplicate entry.",
+        "- No row is retried automatically. Review the PRD Lines grid before running again.",
+        "- Excel `Line` values are passed through as text, including a trailing period such as `2026_2.2.1.`.",
         "",
     ])
 
@@ -72,8 +82,11 @@ def generate_json_report(report: RunReport, output_path: Path) -> Path:
         "workbook_path": report.workbook_path,
         "target_url": report.target_url,
         "is_dry_run": report.is_dry_run,
+        "portal_mode": report.portal_mode,
         "total_rows": report.total_rows,
         "successful_rows": report.successful_rows,
+        "entered_rows": report.entered_rows,
+        "uncertain_rows": report.uncertain_rows,
         "failed_rows": report.failed_rows,
         "skipped_rows": report.skipped_rows,
         "stop_reason": report.stop_reason,

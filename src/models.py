@@ -45,8 +45,11 @@ class RunReport:
     workbook_path: str = ""
     target_url: str = ""
     is_dry_run: bool = False
+    portal_mode: bool = False
     total_rows: int = 0
     successful_rows: int = 0
+    entered_rows: int = 0
+    uncertain_rows: int = 0
     failed_rows: int = 0
     skipped_rows: int = 0
     stop_reason: Optional[str] = None
@@ -55,5 +58,7 @@ class RunReport:
     def finalize(self):
         self.end_time = datetime.now().isoformat()
         self.successful_rows = sum(1 for r in self.row_results if r.status == "SUCCESS")
+        self.entered_rows = sum(1 for r in self.row_results if r.status == "ENTER_SENT")
+        self.uncertain_rows = sum(1 for r in self.row_results if r.status == "UNCERTAIN")
         self.failed_rows = sum(1 for r in self.row_results if r.status == "FAILED")
         self.skipped_rows = sum(1 for r in self.row_results if r.status == "SKIPPED")

@@ -1,202 +1,66 @@
-# Helios PRD - Excel-Driven Material-Line Entry Automation (Local Prototype)
+# Helios PRD Material Line Entry
 
-> **DEMO — LOCAL ONLY**: This is a standalone local prototype built to verify the Excel-to-page automation logic. It does not connect to, open, inspect, or submit anything to the production Helios PRD portal. No production URLs, credentials, tokens, or network calls are used.
+This Windows desktop tool reads the five required values from Excel, fills the matching fields in the open Site Material Request, and presses **Enter once per row**. You review the Lines grid and continue the remaining PRD process manually.
 
----
+## What PRD mode does
 
-## 1. Overview & Visual Design
-This repository provides a local, end-to-end prototype of an Excel-driven material-line entry automation based on the **Site Material Requests → Lines** screen from Helios PRD (IBM Maximo-style interface).
+- Uses the five input `name` attributes copied from the actual PRD page:
+  - Part: `wspf_10_mll_udfchar03`
+  - Qty: `wspf_10_mll_udfnum01`
+  - Site: `wspf_10_mll_udfchar05`
+  - Cost Code / SAP Budget Line: `wspf_10_mll_udfchar09`
+  - WBS and Project Code: `wspf_10_mll_udfchar16`
+- Checks that one visible, editable set of those inputs is present.
+- Fills the five values, checks that the visible input values match Excel, then presses Enter on WBS.
+- Waits for all five inputs to clear before continuing. If they do not clear, it stops and marks the row **uncertain**.
+- Does not inspect the Lines grid, click the floppy-disk icon, verify a server save, or retry a row. **Enter sent is not proof that PRD saved the line.**
+- Does not log in or store credentials. You sign in to the Chrome session yourself.
 
-The prototype consists of:
-1. **Desktop GUI Launcher** (`launcher.py`, `run_launcher.bat`):
-   - A clean pop-up window to download the standard Excel template, browse/upload filled files, paste the ticket URL, and start automation.
-   - Supports both Local Prototype mode and attaching to an active, authenticated Chrome SSO session via remote debugging (port 9222).
-2. **Local Dummy Page** (`web/index.html`, `web/styles.css`, `web/app.js`):
-   - Recreates the lines grid and two-column line-entry form from the visual reference.
-   - Saves lines on **Enter** key press matching real Helios PRD behavior (no Add Line button).
-   - Pops up an immediate error message dialog if Enter is pressed before filling all 5 required fields.
-   - Prominently displays a persistent `DEMO — LOCAL ONLY` warning banner.
-   - Enforces strict validation on all 5 required fields before allowing line creation.
-3. **Template & Sample Excel Files** (`data/`):
-   - `Helios_Material_Lines_Template.xlsx`: Clean blank template with guidance and formatting.
-   - `sample_material_lines.xlsx`: Contains the exact 7 records preserving trailing period on `2026_2.2.1.`.
-4. **Python Automation Engine** (`src/automation.py`, `src/excel_reader.py`):
-   - Built with **Python 3.12** and **Playwright**.
-   - Submits lines by typing the 5 fields and pressing **Enter** into the form.
-   - Validates the workbook schema, cell non-emptiness, and positive numeric quantities.
-   - Uses stable, label-based and `data-testid` selectors.
-   - Performs row-by-row submission with immediate 5-field table verification.
-   - Implements a fail-fast halt policy: stops immediately on the first failed or ambiguous save to prevent duplicate records.
-   - Supports attaching to existing browser sessions via Chrome DevTools Protocol (CDP).
-5. **Test Suite & Reports** (`tests/`, `reports/`):
-   - 10 automated tests covering unit validation, trailing dot retention, negative cases, batch halting, and end-to-end browser entry.
+The live portal has not been directly accessible from this development environment. The first live test must use one row on the test request, then you must review the result in PRD before using a larger workbook. Lookup behavior and the page's Enter/reset behavior are confirmed only by that real one-row test.
 
----
+## Work PC setup
 
-## 2. Field Mapping Specification
+1. Extract this ZIP to a normal folder, for example `C:\Users\<you>\PycharmProjects\Helios-PRD-copy`.
+2. Run `setup_work_pc.bat`. It uses the Python launcher when available, installs the dependencies in `.venv`, and installs Playwright Chromium. If company network controls block installation, ask IT to allow the required Python package and browser downloads.
+3. Run `run_tests.bat`. Continue only if every test passes.
+4. Run `run_launcher.bat` to open the desktop launcher.
 
-| Excel Column Name | Dummy Page Field Label | Page Control Selector (`data-testid`) | Data Constraint / Verification Rule |
-| :--- | :--- | :--- | :--- |
-| **Item Code** | **Part** | `input-part` | Required string (e.g. `CABL00058`) |
-| **Quantity Req Per Site** | **Qty** | `input-qty` | Required positive number (> 0) |
-| **Site ID** | **Site** | `input-site` | Required string (e.g. `TZKA8027`) |
-| **Line** | **Cost Code - SAP Budget Line** | `input-cost-code` | Required text; **must preserve trailing dot** (e.g. `2026_2.2.1.`) |
-| **WBS** | **WBS and Project Code** | `input-wbs` | Required string (e.g. `TZKA8027-1795051262`) |
+## Prepare and pilot the Excel workbook
 
----
+1. In the launcher, choose **Download Blank Excel Template** and save it.
+2. Enter values starting on row 2. Do not rename the five column headers.
+3. Make a copy containing only the first intended material row for the initial live pilot. Save it as a separate workbook so the full list stays unchanged.
+4. Check the item code, quantity, site, Line, and WBS against the request before running. Quantity must be a positive whole number. Text such as `2026_2.2.1.` is preserved, including the final period.
 
-## 3. Official Sample Data (7 Records)
+## Test on the PRD request
 
-The workbook `data/sample_material_lines.xlsx` contains exactly these records:
+1. Double-click `start_chrome_sso.bat`.
+2. In the Chrome window it opens, sign in to Helios PRD, open the test Site Material Request, select **Lines**, and leave the five fields blank.
+3. Copy the URL from that tab.
+4. In the launcher, select **Browse Excel** and choose the one-row pilot workbook.
+5. Select **Attach to Chrome / PRD** and paste the copied URL.
+6. Click **Dry-Run Validation** first. This checks that the five fields are present and does not type or submit anything.
+7. If dry run passes, click **Run Automation** and confirm the prompt. Keep the PRD tab open and do not interact with the fields while it runs.
+8. Review the Lines grid yourself. Confirm every value and that the line appeared once. If the input fields did not clear or the launcher reports an uncertain row, inspect the request manually and do not rerun that row.
+9. After the one-row pilot works, prepare the intended full workbook and use the same steps on the intended request.
 
-| Item Code | Quantity Req Per Site | Site ID | Line | WBS |
-| :--- | :---: | :--- | :--- | :--- |
-| `CABL00058` | 1 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `CABL00059` | 1 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `DBDS00031` | 1 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `DBDS00030` | 2 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `DBDS00029` | 1 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `DBDS00028` | 2 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
-| `FOKT00004` | 1 | `TZKA8027` | `2026_2.2.1.` | `TZKA8027-1795051262` |
+## Local demo
 
----
+Choose **Local Demo Page** in the launcher to test the Excel workflow against the bundled dummy page. The demo is not connected to PRD. It checks the saved rows in the demo table; those checks do not establish that PRD behaves the same way.
 
-## 4. Project Structure
+## Reports
 
-```
-Material PRD/
-├── data/
-│   └── sample_material_lines.xlsx   # Source of truth 7-record Excel file
-├── web/
-│   ├── index.html                   # Maximo-style dummy page with DEMO banner
-│   ├── styles.css                   # Enterprise stylesheet matching screenshot
-│   └── app.js                       # Client-side validation, rendering, and state
-├── src/
-│   ├── __init__.py
-│   ├── models.py                    # Data classes for records and run reports
-│   ├── excel_reader.py              # Strict workbook schema and data validator
-│   ├── automation.py                # Playwright automation engine with fail-fast logic
-│   └── reporter.py                  # Markdown and JSON report generator
-├── tests/
-│   ├── test_workbook_validator.py   # Unit tests for schema and trailing dot preservation
-│   └── test_automation.py          # Integration tests against local page
-├── reports/
-│   ├── run_report.md                # Generated execution report
-│   ├── run_report.json              # Structured execution report
-│   └── screenshots/
-│       ├── dummy_page_empty.png     # Screenshot of empty dummy page
-│       └── dummy_page_populated.png # Screenshot with all 7 lines saved
-├── scripts/
-│   └── create_sample_excel.py       # Script that creates sample_material_lines.xlsx
-├── main.py                          # CLI runner for the automation
-├── serve.py                         # Standalone HTTP server for the dummy page
-├── pytest.ini                       # Test runner configuration
-└── README.md                        # Documentation and verification guide
-```
+Each run writes `reports/run_report.md` and `reports/run_report.json`.
 
----
+- Demo entries are labelled saved and verified by the dummy page.
+- PRD entries are labelled **Enter sent — review**. The report does not claim that PRD saved them.
+- A row is labelled **uncertain** if Enter was sent but the five input fields did not return to blank. Review it before retrying.
 
-## 5. Setup and Execution Instructions
+## Project files
 
-### Prerequisites
-- Python 3.10+ (Python 3.12 used in development)
-- Playwright and openpyxl
-
-### Environment Activation
-To use the virtual environment created in this project:
-```powershell
-# In PowerShell:
-.\.venv\Scripts\activate
-```
-
-If setting up fresh in another environment:
-```powershell
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install playwright openpyxl pytest
-playwright install chromium
-```
-
-### Running the Live Automation Demo
-Run the CLI automation tool:
-```powershell
-# Runs visibly in Chromium with a 250ms visual stepping delay:
-python main.py
-
-# Or in headless mode:
-python main.py --headless
-
-# Or in dry-run mode (validates workbook and controls without saving):
-python main.py --dry-run
-```
-
-Options:
-- `--excel <path>`: Specify a custom workbook path (defaults to `data/sample_material_lines.xlsx`).
-- `--url <url>`: Target URL (defaults to auto-starting background server on `http://127.0.0.1:8000/index.html`).
-- `--headless`: Run browser without GUI.
-- `--slow-mo <ms>`: Set action delay in milliseconds (default: 250ms).
-- `--report-md <path>`: Markdown report output location.
-- `--report-json <path>`: JSON report output location.
-
-### Running the Automated Test Suite
-Run pytest to verify all 10 unit and integration tests:
-```powershell
-pytest -v
-```
-
----
-
-## 6. Automated Test Results
-
-All 10 automated test cases passed cleanly:
-
-```
-tests/test_automation.py::test_full_sample_run_saves_and_verifies_all_7_rows PASSED     [10%]
-tests/test_automation.py::test_missing_required_value_rejected_without_silent_save PASSED [20%]
-tests/test_automation.py::test_failed_save_stops_batch_without_duplicate_retries PASSED  [30%]
-tests/test_automation.py::test_dry_run_mode_does_not_save_rows PASSED                     [40%]
-tests/test_workbook_validator.py::test_sample_workbook_exists_and_loads PASSED          [50%]
-tests/test_workbook_validator.py::test_trailing_dot_preservation_in_all_records PASSED  [60%]
-tests/test_workbook_validator.py::test_missing_column_rejection PASSED                    [70%]
-tests/test_workbook_validator.py::test_empty_required_cell_rejection PASSED             [80%]
-tests/test_workbook_validator.py::test_invalid_negative_or_zero_quantity PASSED          [90%]
-tests/test_workbook_validator.py::test_non_numeric_quantity PASSED                        [100%]
-
-============================= 10 passed in 13.96s =============================
-```
-
-### Verified Behaviors:
-1. **All 7 Records Verified**:
-   - 7 rows saved in the table in the exact order as the workbook.
-   - All 5 fields (`Part`, `Qty`, `Site`, `Cost Code - SAP Budget Line`, `WBS and Project Code`) match the Excel row exactly.
-2. **Trailing Dot Preservation**:
-   - `2026_2.2.1.` preserves the trailing period throughout openpyxl parsing, form entry, and table DOM inspection.
-3. **Strict Validation Rejection**:
-   - Submitting with an omitted required field triggers an immediate `Validation Error` and does not save any row.
-4. **Fail-Fast Batch Safety**:
-   - Encountering an invalid row immediately halts execution and marks downstream rows as `SKIPPED`, guaranteeing no duplicate lines or ambiguous states.
-5. **Dry-Run Inspection**:
-   - `--dry-run` confirms all controls and validates workbook schema while leaving the table untouched (0 lines added).
-
----
-
-## 7. What Remains Unverified (Production Boundaries)
-
-As specified in the project scope, this is a local prototype only. The following production aspects are intentionally **unverified** and require review/approval before any future work:
-
-1. **Helios PRD Live Authentication & SSO**:
-   - The real portal uses enterprise SSO/OAuth or session cookies. No credentials or login flows were tested or simulated.
-2. **Portal Frame / iFrame Hierarchies**:
-   - Live IBM Maximo instances often embed work areas inside framesets or iframes (`iframe[name="content"]`). In the local prototype, standard top-level DOM selectors were verified.
-3. **Lookup Dialog Modals in Production**:
-   - The live system has magnifying glass lookup dialogs that query server-side catalogs. The automation directly enters the validated codes into the inputs. If the live portal enforces selecting strictly via the lookup popup dialog, that modal interaction will need to be mapped.
-4. **Server Latency & Async Submission Handshakes**:
-   - On the live portal, saving a line triggers SAP budget checks and back-end database transactions with variable latency. The prototype uses synchronous client-side state with Playwright DOM expect assertions.
-5. **Work PC Environment**:
-   - Browser policies, proxy settings, Python environment versions, and firewall rules on the company work PC remain unverified until the next phase.
-
----
-
-## 8. Review and Sign-Off
-- **Status**: Local Prototype Complete and Fully Verified.
-- **Next Step**: Awaiting user review and approval before proceeding with production access planning or work-PC migration.
+- `launcher.py`: desktop UI and Excel selection.
+- `src/automation.py`: demo automation and PRD field entry.
+- `src/excel_reader.py`: workbook validation.
+- `src/template_generator.py`: clean Excel template.
+- `tests/`: workbook, demo, and mock-PRD behavior tests.
+- `web/`: local-only dummy page.

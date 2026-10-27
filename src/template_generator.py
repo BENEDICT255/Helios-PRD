@@ -5,6 +5,7 @@ Produces a clean, user-ready template with the 5 required columns and sample gui
 from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.comments import Comment
 from openpyxl.utils import get_column_letter
 
 TEMPLATE_HEADERS = [
@@ -22,7 +23,6 @@ def generate_excel_template(target_path: Path) -> Path:
 
     header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
-    hint_font = Font(name="Segoe UI", size=9, italic=True, color="64748B")
     border_side = Side(border_style="thin", color="CBD5E1")
     cell_border = Border(left=border_side, right=border_side, top=border_side, bottom=border_side)
 
@@ -36,15 +36,12 @@ def generate_excel_template(target_path: Path) -> Path:
         col_letter = get_column_letter(col_idx)
         ws.column_dimensions[col_letter].width = col_width
 
-    # Row 2: Helpful column hints
+    # Keep the hints in header comments so the first data row is row 2.
     for col_idx, (_, _, hint) in enumerate(TEMPLATE_HEADERS, start=1):
-        cell = ws.cell(row=2, column=col_idx, value=f"Format: {hint}")
-        cell.font = hint_font
-        cell.alignment = Alignment(horizontal="left", vertical="center")
-        cell.border = cell_border
+        ws.cell(row=1, column=col_idx).comment = Comment(hint, "Helios PRD")
 
-    # Format data rows 3-100 as text / number format
-    for row in range(3, 50):
+    # Format data rows 2-100 as text / number format
+    for row in range(2, 100):
         for col_idx in range(1, 6):
             cell = ws.cell(row=row, column=col_idx)
             cell.border = cell_border
@@ -55,6 +52,8 @@ def generate_excel_template(target_path: Path) -> Path:
 
     target_path = Path(target_path)
     target_path.parent.mkdir(parents=True, exist_ok=True)
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = "A1:E1"
     wb.save(target_path)
     return target_path
 

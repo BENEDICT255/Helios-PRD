@@ -1,21 +1,18 @@
 @echo off
-REM ======================================================================
-REM  Helios PRD - Run Automated Pytest Test Suite
-REM ======================================================================
-
 setlocal
 cd /d "%~dp0"
 
-if exist ".venv\Scripts\pytest.exe" (
-    set "PYTEST_EXE=.venv\Scripts\pytest.exe"
+if exist ".venv\Scripts\python.exe" (
+    set "PYTHON_EXE=.venv\Scripts\python.exe"
 ) else (
-    set "PYTEST_EXE=pytest"
+    set "PYTHON_EXE=python"
 )
 
 echo [*] Running automated test suite...
 echo.
-
-"%PYTEST_EXE%" -v
-
+"%PYTHON_EXE%" -m pytest -v
+set "TEST_EXIT=%ERRORLEVEL%"
 echo.
+if not "%TEST_EXIT%"=="0" echo [ERROR] Tests failed.
 pause
+exit /b %TEST_EXIT%

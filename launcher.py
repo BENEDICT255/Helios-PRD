@@ -24,7 +24,7 @@ class HeliosLauncherApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Helios PRD - Material Lines Automation Launcher")
-        self.geometry("740x680")
+        self.geometry("740x700")
         self.minsize(680, 600)
 
         # Style configuration
@@ -67,12 +67,12 @@ class HeliosLauncherApp(tk.Tk):
         ttk.Label(header_frame, text="Helios PRD Material-Line Entry Automation", style="Header.TLabel").pack(anchor=tk.W)
         ttk.Label(
             header_frame,
-            text="Excel-driven automated entry into Site Material Requests → Lines (Local Prototype & SSO-Attached)",
+            text="Enter Excel rows into the five required Lines fields; review the result in PRD yourself.",
             style="SubHeader.TLabel"
         ).pack(anchor=tk.W)
 
         # 2. Excel Template & Workbook Selection Section
-        excel_frame = ttk.LabelFrame(main_frame, text="1. Excel Workbook & Template", style="Section.TLabelframe")
+        excel_frame = ttk.LabelFrame(main_frame, text="1. Excel workbook", style="Section.TLabelframe")
         excel_frame.pack(fill=tk.X, pady=(0, 10))
 
         # Template download row
@@ -97,7 +97,7 @@ class HeliosLauncherApp(tk.Tk):
         self.status_lbl.pack(fill=tk.X)
 
         # 3. Target Portal & Connection Mode Section
-        target_frame = ttk.LabelFrame(main_frame, text="2. Target Portal URL & Access Mode", style="Section.TLabelframe")
+        target_frame = ttk.LabelFrame(main_frame, text="2. Page URL and mode", style="Section.TLabelframe")
         target_frame.pack(fill=tk.X, pady=(0, 10))
 
         url_row = ttk.Frame(target_frame)
@@ -115,11 +115,8 @@ class HeliosLauncherApp(tk.Tk):
         rb1 = ttk.Radiobutton(mode_row, text="Local Demo Page", variable=self.mode_var, value="LOCAL", command=self._on_mode_change)
         rb1.pack(side=tk.LEFT, padx=(0, 12))
 
-        rb2 = ttk.Radiobutton(mode_row, text="Attach to Active Chrome / SSO Session (Port 9222)", variable=self.mode_var, value="CDP", command=self._on_mode_change)
+        rb2 = ttk.Radiobutton(mode_row, text="Attach to Chrome / PRD (Port 9222)", variable=self.mode_var, value="CDP", command=self._on_mode_change)
         rb2.pack(side=tk.LEFT, padx=(0, 12))
-
-        rb3 = ttk.Radiobutton(mode_row, text="Direct Browser Launch", variable=self.mode_var, value="DIRECT", command=self._on_mode_change)
-        rb3.pack(side=tk.LEFT)
 
         # Advisory hint
         self.mode_hint_var = tk.StringVar(
@@ -173,8 +170,8 @@ class HeliosLauncherApp(tk.Tk):
             self.mode_hint_var.set("💡 Local Prototype Mode: Automates against the local dummy Helios PRD page.")
         elif mode == "CDP":
             self.mode_hint_var.set(
-                "🔑 Private SSO Session Mode: Launch Chrome with `chrome.exe --remote-debugging-port=9222`, "
-                "log in with your company credentials/access grant, navigate to the ticket, and click Run Automation."
+                "PRD mode: use the Chrome window started by start_chrome_sso.bat. Open the test request on Lines, "
+                "copy that tab's URL here, and leave all five inputs blank. Enter is sent once per Excel row."
             )
         else:
             self.mode_hint_var.set("🌐 Direct Mode: Playwright will open a new browser window directly to the Portal URL.")
@@ -243,6 +240,19 @@ class HeliosLauncherApp(tk.Tk):
 
         target_url = self.url_var.get().strip()
         mode = self.mode_var.get()
+        if mode == "CDP":
+            if not target_url.lower().startswith(("https://", "http://")):
+                messagebox.showerror("Page URL required", "Paste the URL of the open test request's Lines tab.")
+                return
+            confirmed = messagebox.askokcancel(
+                "Confirm PRD line entry",
+                f"This will enter {len(records)} Excel rows into the open PRD request and press Enter once per row.\n\n"
+                "The tool will not verify saved rows. You will review the Lines grid yourself after it finishes.\n\n"
+                "Confirm the open tab is the intended test request and all five input fields are blank.",
+                icon="warning",
+            )
+            if not confirmed:
+                return
         cdp_url = "http://127.0.0.1:9222" if mode == "CDP" else None
 
         self.run_btn.configure(state=tk.DISABLED)
@@ -259,7 +269,8 @@ class HeliosLauncherApp(tk.Tk):
                     target_url=target_url,
                     headless=False,
                     slow_mo=200,
-                    cdp_url=cdp_url
+                    cdp_url=cdp_url,
+                    portal_mode=(mode == "CDP"),
                 )
                 report = auto.run(records, is_dry_run=is_dry_run, workbook_path=str(excel_path))
 
@@ -269,26 +280,58 @@ class HeliosLauncherApp(tk.Tk):
                 generate_markdown_report(report, md_path)
                 generate_json_report(report, json_path)
 
-                self._log(f"[+] Execution completed.")
-                self._log(f"    Total: {report.total_rows} | Saved: {report.successful_rows} | Failed: {report.failed_rows}")
-                if report.stop_reason:
-                    self._log(f"    Halt Reason: {report.stop_reason}")
-
-                if is_dry_run:
-                    messagebox.showinfo("Dry-Run Complete", f"Workbook validated and controls verified.\n{report.total_rows} rows ready for live entry.")
-                elif report.failed_rows == 0:
-                    messagebox.showinfo("Success", f"All {report.successful_rows} lines saved and verified successfully!")
-                else:
-                    messagebox.showwarning("Batch Halted", f"Execution stopped: {report.stop_reason}")
+                self.after(0, lambda: self._show_run_result(report, is_dry_run, mode))
 
             except Exception as ex:
-                self._log(f"[-] Execution error: {ex}")
-                messagebox.showerror("Error", f"Automation encountered an error:\n{ex}")
+                self.after(0, lambda error=ex: self._show_run_error(error))
             finally:
-                self.run_btn.configure(state=tk.NORMAL)
-                self.dry_btn.configure(state=tk.NORMAL)
+                self.after(0, self._enable_run_buttons)
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _show_run_result(self, report, is_dry_run: bool, mode: str):
+        self._log("[+] Run finished.")
+        self._log(
+            f"    Total: {report.total_rows} | Demo verified: {report.successful_rows} | "
+            f"PRD Enter sent: {report.entered_rows} | Uncertain: {report.uncertain_rows} | "
+            f"Failed: {report.failed_rows} | Skipped: {report.skipped_rows}"
+        )
+        if report.stop_reason:
+            self._log(f"    Stopped: {report.stop_reason}")
+
+        if is_dry_run:
+            messagebox.showinfo(
+                "Dry run complete",
+                f"Workbook and page fields are ready for {report.total_rows} rows.\n"
+                "No values were entered and nothing was submitted.",
+            )
+        elif mode == "CDP":
+            message = (
+                f"Enter was sent for {report.entered_rows} rows.\n"
+                f"Rows needing review: {report.uncertain_rows}.\n\n"
+                "This tool does not confirm that PRD saved them. Review the Lines grid now. "
+                "If a row is uncertain, do not rerun it until you have checked the request."
+            )
+            if report.stop_reason:
+                message += f"\n\nStopped: {report.stop_reason}"
+                messagebox.showwarning("Stopped — review PRD before retrying", message)
+            else:
+                messagebox.showinfo("Review PRD", message)
+        elif report.failed_rows == 0:
+            messagebox.showinfo(
+                "Demo complete",
+                f"All {report.successful_rows} demo rows were saved and verified on the local dummy page.",
+            )
+        else:
+            messagebox.showwarning("Batch stopped", report.stop_reason or "A row failed.")
+
+    def _show_run_error(self, error):
+        self._log(f"[-] Execution error: {error}")
+        messagebox.showerror("Automation error", f"Automation encountered an error:\n{error}")
+
+    def _enable_run_buttons(self):
+        self.run_btn.configure(state=tk.NORMAL)
+        self.dry_btn.configure(state=tk.NORMAL)
 
 def main():
     app = HeliosLauncherApp()
